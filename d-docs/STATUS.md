@@ -54,6 +54,7 @@ S7 可展示
 - 平台：Linux + macOS 公共交集
 - Inference：外部 Provider
 - 核心工具：`read / write / edit / bash`
+- 并发边界：不面向多用户；允许单用户内部多个 model request 并发；tool call 并发不作为第一阶段验收条件
 - 非目标与极简原则已经锁定
 
 状态：**已通过**。
@@ -117,9 +118,11 @@ S7 可展示
 model round trips
 → reasoning / output tokens
 → context / observation tokens
-→ parallel / batching / early dispatch
+→ model request 并发 / batching / early dispatch
 → provider / shell / harness hot path
 ```
+
+工具调用并发不属于第一阶段验收主路径；只有实际轨迹证明其收益足够高时才提前实现。
 
 验收门槛：
 
@@ -138,6 +141,7 @@ model round trips
 验收门槛：
 
 - 完成 Harness Track：same model / endpoint / reasoning / token budget / sampling / tasks / concurrency
+- `concurrency` 指 benchmark runner / workload 并发条件保持一致，不代表 V 面向多用户并发
 - 对比 V / Pi 的 `agent_execution`、TTFA、ITL、turns、tool calls、tokens
 - 能解释主要速度差来自哪些机制
 - 关键优化至少有独立 A/B 或 ablation 证据
