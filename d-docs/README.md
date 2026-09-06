@@ -1,4 +1,4 @@
-# La Valet（V）项目决策
+# Le Valet（V）项目决策
 
 > 旧代号：`delta-agent` ｜ 中文名：拉挽乐 ｜ 仓库：`chaoshou-coder/LaValet`
 
@@ -232,3 +232,9 @@ privilege split  capability     workflow/DAG engine
 ## 12. 文档规则
 
 项目文档统一使用简体中文，并遵循 [`文档规范.md`](./文档规范.md)。
+
+## 13. 开发花絮
+
+非正式历史、命名过程、弃案与内部梗见 [`花絮/`](./花絮/README.md)。
+
+这些内容用于保留项目演化过程，不作为当前设计约束。
