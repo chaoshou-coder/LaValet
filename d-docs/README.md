@@ -237,10 +237,10 @@ privilege split  capability     workflow/DAG engine
 
 ## 12. 文档规则
 
-项目文档统一使用简体中文，并遵循 [`文档规范.md`](./文档规范.md)。
+项目文档正文统一使用简体中文；所有文件夹名和文件名必须使用 ASCII 安全字符。完整规范见 [`DOCS_STYLE.md`](./DOCS_STYLE.md)。
 
 ## 13. 开发花絮
 
-非正式历史、命名过程、弃案与内部梗见 [`花絮/`](./花絮/README.md)。
+非正式历史、命名过程、弃案与内部梗见 [`lore/`](./lore/README.md)。
 
 这些内容用于保留项目演化过程，不作为当前设计约束。
