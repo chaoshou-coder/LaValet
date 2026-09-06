@@ -65,7 +65,7 @@ tool schema
 context / observation 压缩
 减少 model round trips
 减少无效 prose
-并行 / batching / early dispatch
+model request 并发 / batching / early dispatch
 provider / transport / harness hot path
 ```
 
@@ -87,6 +87,8 @@ same tasks / environment
 same concurrency
 ```
 
+这里的 `same concurrency` 指 benchmark runner / workload 的并发条件保持一致，不代表 V 面向多用户并发场景。
+
 核心比较：
 
 > Same model. Same config. Same tasks. Different harness.
@@ -104,12 +106,14 @@ P0  减少 visible output tokens
 P0  减少 context / observation tokens
 P0  tool-first / final-only prose
 
-P1  并行工具 / batching / early dispatch
+P1  model request 并发 / batching / early dispatch
 P1  provider / session / connection reuse
 P1  shell / FS hot path
 
 P2  毫秒级 harness 微优化
 ```
+
+工具调用并发属于支持但劣后开发的 feature，不作为第一阶段最终验收条件；只有实际轨迹证明其具有高 E2E 收益时才提前实现。
 
 原因：
 
