@@ -1,6 +1,6 @@
 # La Valet（V）TODO
 
-优先级：`P0 = 跑通 Terminal-Bench` ｜ `P1 = 建立可信速度优势` ｜ `P2 = 只优化已测瓶颈`
+优先级：`P0 = 跑通 Terminal-Bench` ｜ `P1 = 拉开 E2E 速度差` ｜ `P2 = 只优化已测瓶颈`
 
 ## 总览
 
@@ -8,13 +8,13 @@
 P0  Terminal-Bench 2.1 跑起来
  │
  ▼
-P1  Pi 等对照跑清楚
+P1  与 Pi 拉开真实任务 E2E 差距
  │
  ▼
-P2  沿 Harbor timing / trajectory 优化
+P2  沿 Harbor timing / trajectory 继续压缩
 ```
 
-评测协议见 [`BENCHMARK.md`](./BENCHMARK.md)。
+不再调研或筛选其他 benchmark。评测协议见 [`BENCHMARK.md`](./BENCHMARK.md)。
 
 ## P0｜最小 benchmark 闭环
 
@@ -26,6 +26,7 @@ P2  沿 Harbor timing / trajectory 优化
 - [ ] 提取 `agent_execution` duration
 - [ ] 自动汇总 reward / accuracy / p50 / p95 / p99
 - [ ] 固定 benchmark 环境、并发度、provider 配置
+- [ ] 建立 Pi 同任务 baseline
 
 ### Harness
 - [ ] 初始化 Bun + TypeScript 项目
@@ -74,13 +75,24 @@ P2  沿 Harbor timing / trajectory 优化
 - [ ] 不加 worker pool / scheduler / DAG
 - [ ] 不加 plugin framework
 - [ ] 不为 Linux/macOS 预造 OS abstraction
+- [ ] 不为 benchmark 权威性增加额外准备工作
 - [ ] 生产价值不能单独构成新增组件的理由
 
-## P1｜建立可信速度优势
+## P1｜拉开 E2E 速度差
 
 ### Rank Track
 
-目标：完整 V 系统的最低 E2E。
+目标：完整 V 系统在 Terminal-Bench 2.1 上尽可能快。
+
+```text
+优先级
+1. 少 model round trip
+2. 少 reasoning token
+3. 少 visible output token
+4. 少 context / observation token
+5. 并行 / batching / early dispatch
+6. provider / shell / harness hot path
+```
 
 - [ ] 选择 accuracy floor
 - [ ] reasoning effort sweep
@@ -88,12 +100,13 @@ P2  沿 Harbor timing / trajectory 优化
 - [ ] prompt / tool schema 压缩
 - [ ] context / observation 压缩
 - [ ] model turns / tool calls 统计
+- [ ] 尝试减少无效 model turn
 - [ ] 找 Pareto 最优配置
 - [ ] 保存完整配置与 commit SHA
 
 ### Harness Track
 
-目标：隔离 V harness 本身的速度优势。
+目标：解释 V 的速度优势中有多少来自 harness 本身。
 
 固定：
 
@@ -102,8 +115,7 @@ model / endpoint / reasoning effort / token budget
 sampling / tasks / environment / concurrency
 ```
 
-- [ ] 接入 Pi 对照
-- [ ] 尽量统一 tool capability
+- [ ] 尽量统一 V / Pi tool capability
 - [ ] 同一模型配置跑 V / Pi
 - [ ] 比较 `agent_execution` p50 / p95 / p99
 - [ ] 比较 TTFA / ITL / turns / tool calls / tokens
@@ -170,9 +182,10 @@ next provider dispatch
 |---|---|
 | Terminal-Bench accuracy | [ ] |
 | `agent_execution` p50/p95/p99 | [ ] |
+| 与 Pi 的 speedup | [ ] |
 | model turns | [ ] |
 | tool calls | [ ] |
-| prompt / cached / output tokens | [ ] |
+| prompt / cached / reasoning / output tokens | [ ] |
 | SLOC | [ ] |
 | dependency count | [ ] |
 | cold start | [ ] |
@@ -199,6 +212,7 @@ next provider dispatch
 ## 明确延后
 
 ```text
+其他 benchmark landscape / 权威性比较
 sandbox / container orchestration / capability system
 multi-tenant security / generic workflow engine
 大型 native tool catalog / built-in inference runtime
@@ -210,14 +224,14 @@ GPU/Metal/CUDA/ANE scheduling / distributed workers
 
 任何候选进入核心前必须回答：
 
-1. 改善 Terminal-Bench 的哪个指标？
-2. 对 accuracy ↔ latency Pareto frontier 的收益是多少？
+1. 能降低 Terminal-Bench E2E 多少？
+2. accuracy 是否仍在可接受范围？
 3. 增加多少概念、依赖、进程、状态、分支？
 4. Bun / OS / provider / Unix 工具是否已经解决？
 5. 能否留在核心之外？
 
 ```text
-无 benchmark 收益 → 不做
+无明显 E2E 收益 → 不做
 收益强 + 复杂度低 → 做
 收益强 + 复杂度高 → 继续找更简单方案
 ```
