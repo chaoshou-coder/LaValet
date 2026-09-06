@@ -54,6 +54,7 @@ V / Bun
 | 核心工具固定为 `read / write / edit / bash` | 四个原语已能覆盖 coding Agent 的最小闭环，并保持工具面和 prompt schema 极小 |
 | 单进程优先 | 避免 IPC、daemon、worker 带来的固定开销和状态复杂度 |
 | session 默认仅放内存 | 当前 benchmark 场景不需要数据库或持久化系统 |
+| 并发边界：不面向多用户；单用户内部允许多个 model request 并发；tool call 并发作为劣后 feature | 保留单用户场景所需的内部并行能力，同时不为多用户调度与非验收 feature 提前增加复杂度 |
 | 安全隔离不是核心目标 | 单用户可信环境下，sandbox / privsep 的收益低于其复杂度与延迟成本 |
 | 不预造 plugin / workflow / capability framework | 这些机制只有在 benchmark 或核心运行需求证明必要时才进入项目 |
 
@@ -143,7 +144,7 @@ Pi                 = 首要对照
 
 ```text
 其他 benchmark 横向调研
-多租户安全
+多用户并发 / 多租户安全
 容器编排 / hardened sandbox
 privilege split / capability system
 workflow / DAG engine
@@ -169,7 +170,7 @@ spawn vs persistent shell
 reasoning effort 最优点
 output token budget
 accuracy floor
-parallel / batching / early dispatch
+batching / early dispatch
 observation compression
 ```
 
