@@ -4,19 +4,23 @@
 
 ## 1. 首要目标
 
-V 的首要目标是提高面试竞争力，以公开 benchmark 中可复现的速度优势展示工程能力。
+V 的首要目标是提高面试竞争力，并通过真实 Agent 任务中的显著速度优势展示工程能力。
 
 ```text
-maximize InterviewSignal
-        │
-        ▼
-公开 benchmark + 可复现结果 + 清晰归因
-        │
-        ▼
+maximize 可展示的速度优势
+          │
+          ▼
 Terminal-Bench 2.1 + Harbor
+          │
+          ├─ reward / accuracy 保证任务真的完成
+          └─ agent_execution 衡量真实 E2E latency
 ```
 
-生产通用性、安全、生态完整度均低于该目标。
+选择 Terminal-Bench 2.1 的主要原因是：任务真实、多轮 Agent 交互充分、Harbor 可直接记录完整执行时间、无需额外建设评测体系。
+
+**benchmark 权威性不参与主要优化决策。** 不再额外调研或筛选其他 benchmark；除非 Terminal-Bench 本身阻碍速度优势展示，否则不切换主战场。
+
+生产通用性、安全、生态完整度同样低于速度目标。
 
 ## 2. 主战场
 
@@ -24,43 +28,54 @@ Terminal-Bench 2.1 + Harbor
 |---|---|
 | Benchmark | `terminal-bench/terminal-bench-2-1` |
 | Runner / telemetry | Harbor |
-| 核心速度指标 | `agent_execution` E2E latency |
-| 能力约束 | Terminal-Bench reward / accuracy |
+| 核心目标 | 最大化真实任务 E2E 速度优势 |
+| 核心指标 | `agent_execution` latency |
+| 能力约束 | reward / accuracy |
 | 统计 | p50 / p95 / p99 + success rate |
-| 对照 | Pi 等公开 Agent，同任务、同环境 |
+| 首要对照 | Pi |
 
-官方榜单仍以 accuracy 为主；V 额外利用 Harbor timing 建立 speed track。
+```text
+真实任务
+  +
+同任务 / 同环境
+  +
+尽可能公平的模型配置
+  ↓
+比较 V 与 Pi 的 E2E
+```
+
+官方 leaderboard 的排序方式不是项目目标；Harbor timing 才是主要数据源。
 
 ## 3. 评价函数
 
-单纯追求最短时间会奖励“快速失败”，因此速度必须带能力约束：
+单纯追求最短时间会奖励快速失败，因此：
 
 ```text
 minimize  T_agent_execution
 subject to accuracy >= target
 ```
 
-优先比较 Pareto frontier：
+优化目标是把可接受 accuracy 下的 latency 压到最低。
 
 ```text
 accuracy
    ▲
    │        ●
    │     ●
-   │  ●
+   │  ●  ← 优先寻找左上方
    └────────────► latency
        lower is better
 ```
 
-任何“更快”结论必须同时报告 accuracy。
+任何速度结果必须同时报告 accuracy / reward。
 
 ## 4. 双赛道
 
-### Rank Track｜最终系统刷榜
+### Rank Track｜最终速度
 
-目标：在合法 benchmark 规则内，把完整 Agent 的 E2E 压到最低。
+目标：让完整 V 系统在 Terminal-Bench 2.1 上尽可能快。
 
-允许优化：
+允许使用所有符合任务规则的优化：
 
 ```text
 reasoning effort / thinking
@@ -75,13 +90,13 @@ prompt / policy
 provider / transport / harness hot path
 ```
 
-这里测的是 **V 作为完整系统**，不要求只隔离 harness。
+这里优化的是 **完整 Agent E2E**，不是纯 harness overhead。
 
-### Harness Track｜归因实验
+### Harness Track｜速度归因
 
-目标：证明 V 本身比其他 harness 更快。
+目标：证明速度优势不只来自关闭 thinking 或缩短输出。
 
-必须固定：
+固定：
 
 ```text
 model
@@ -93,69 +108,89 @@ sampling 参数
 并发度
 ```
 
-尽量固定 tool capability；无法完全等价时必须记录差异。
+尽量统一 tool capability。
 
-这里的核心 claim：
+核心 claim：
 
 > Same model. Same config. Same tasks. Different harness.
 
-## 5. Token / Thinking 策略
+Harness Track 服务于解释 Rank Track，不与 Rank Track 争夺开发优先级。
 
-**减少 reasoning 与生成 token 是 P0 性能方向。**
+## 5. E2E 优化优先级
+
+真实任务下，优先优化对 E2E 影响最大的量：
+
+```text
+P0  减少 model round trips
+P0  减少 reasoning tokens
+P0  减少 visible output tokens
+P0  减少 context / observation tokens
+P0  tool-first / final-only prose
+
+P1  并行工具 / batching / early dispatch
+P1  provider/session/connection reuse
+P1  shell / FS hot path
+
+P2  毫秒级 harness 微优化
+```
 
 原因：
 
 ```text
 T_E2E ≈ Σ(model latency + tool latency + harness overhead)
 
-model latency
-  ∝ reasoning tokens
-  + visible output tokens
-  + model round trips
+少一次 model call
+通常远大于
+少几毫秒 Bun / dispatch 开销
 ```
 
-优先顺序：
+## 6. Token / Thinking 策略
+
+减少 reasoning 与生成 token 是 P0。
 
 ```text
-1. 删除无价值的自然语言输出
-2. tool-first：能调用工具就不先解释
-3. 限制每轮 visible output token
-4. 测试 low / minimal / off reasoning
-5. 用 benchmark 找 accuracy-latency Pareto 点
-6. 只有收益成立才增加自适应 reasoning 机制
+1. 删除工具调用前的解释性 prose
+2. 中间轮优先只输出 tool call
+3. 限制 visible output token
+4. sweep low / minimal / off reasoning
+5. 找 accuracy ↔ latency Pareto 点
+6. 只有静态配置不够时才考虑 adaptive reasoning
 ```
 
-禁止凭直觉永久关闭 thinking。Terminal-Bench 包含困难长程任务，reasoning 降低可能增加失败、重试和 tool round-trip，最终反而提高 E2E。
+不预设 thinking 越少越好。reasoning 过低可能导致失败、重试和更多 tool round-trip，最终增加 E2E。
 
-## 6. 每次实验必须记录
+## 7. 每次实验记录
 
 | 维度 | 指标 |
 |---|---|
 | 结果 | reward / accuracy / error / timeout |
 | E2E | `agent_execution` p50 / p95 / p99 |
-| 模型 | prompt / cached / reasoning / output tokens（能取则取） |
+| 模型 | prompt / cached / reasoning / output tokens |
 | 轨迹 | model turns / tool calls / failed tool calls |
 | Harness | TTFA / ITL / request prepare / dispatch |
 | 配置 | model / effort / token limit / provider / commit SHA |
 
-## 7. 开发优先级规则
+## 8. 开发决策规则
 
 新功能先问：
 
 ```text
-能否改善 Terminal-Bench 2.1 的
-accuracy ↔ latency Pareto frontier？
-        │
-   ┌────┴────┐
-  YES       NO
-   │         │
- 高优先级   默认延后
+能否明显降低 Terminal-Bench 2.1 的 E2E
+且不让 accuracy 跌出可接受范围？
+          │
+     ┌────┴────┐
+    YES       NO
+     │         │
+   优先做     延后
 ```
 
-生产价值不能单独构成进入核心的理由。
+不再因为以下原因增加准备工作：
 
-## 8. 官方依据
+```text
+“这个 benchmark 更权威”
+“生产以后可能需要”
+“其他 Agent 都有”
+“理论上更完整”
+```
 
-- Terminal-Bench 2.1 leaderboard：支持 Custom Agent，禁止修改任务 timeout/resources，并公开 Agent / Model / Effort / Accuracy / Tokens / Cost。
-- Terminal-Bench 官方仓库：Harbor 运行时可传 agent、model 与 `reasoning_effort`。
-- Harbor：trial/job 是正式评测单位，结果包含独立 phase timing，可区分 `agent_execution` 与 setup / verifier / total。
+原则：**固定 Terminal-Bench 2.1，尽快跑 baseline，然后围绕真实 E2E 数据迭代。**
